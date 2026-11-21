@@ -186,7 +186,9 @@
         household = result.household;
         localStorage.setItem(STORE_CODE, inviteCode);
         await subscribe();
-        await navigator.clipboard.writeText(location.origin + location.pathname + "#invite=" + inviteCode);
+        const newLink = location.origin + location.pathname + "#invite=" + inviteCode;
+        try { await navigator.clipboard.writeText(newLink); }
+        catch (_) { window.prompt("Copy this new family invite link:", newLink); }
         $("#resetDialog").close();
         toast("New family link copied");
       } catch (error) {
