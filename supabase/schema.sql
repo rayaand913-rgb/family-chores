@@ -23,5 +23,13 @@ create index family_chores_household_created_idx
 alter table public.family_households enable row level security;
 alter table public.family_chores enable row level security;
 
+create policy "No direct client access to family households"
+  on public.family_households for all to anon, authenticated
+  using (false) with check (false);
+
+create policy "No direct client access to family chores"
+  on public.family_chores for all to anon, authenticated
+  using (false) with check (false);
+
 revoke all privileges on table public.family_households, public.family_chores from anon, authenticated;
 grant all privileges on public.family_households, public.family_chores to service_role;
