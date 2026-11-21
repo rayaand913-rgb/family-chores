@@ -7,7 +7,7 @@ A shared family chore board hosted on GitHub Pages and backed by Supabase.
 - Add, edit, complete, and remove chores.
 - Track chore name, date added, assigned family member, and points.
 - Filter chores by family member or completion status.
-- Track personal points for each family member based on completed chores.
+- Award personal points to whoever checks off each completed chore, including chores assigned to Anyone.
 - Keep list updates synchronized across devices.
 
 ## Family access
