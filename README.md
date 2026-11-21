@@ -11,9 +11,9 @@ A shared family chore board hosted on GitHub Pages and backed by Supabase.
 
 ## Family access
 
-The board uses a private invite link, so family members do not need accounts. Anyone with the link can view and change the list. Share it only with your family. Use the Reset link button in the board to invalidate the old link and copy a replacement.
+The board uses a shared family password, so family members do not need accounts. Anyone with the password can view and change the list. Share it only with your family.
 
-The invite code is stored as a SHA-256 hash in the database. It is kept in the link fragment, which the browser does not send as part of the page request. The public Supabase API key in app.js is intended for browser use; the server key stays in Supabase Edge Function secrets.
+The password is stored as a SHA-256 hash in the database. The public Supabase API key in app.js is intended for browser use; the server key stays in Supabase Edge Function secrets.
 
 ## Project files
 
