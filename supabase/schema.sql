@@ -13,6 +13,7 @@ create table public.family_chores (
   assigned_to text not null default 'Anyone' check (char_length(trim(assigned_to)) between 1 and 80),
   points integer not null default 0 check (points >= 0 and points <= 999999),
   completed boolean not null default false,
+  completed_by text check (completed_by is null or char_length(trim(completed_by)) between 1 and 80),
   created_at timestamptz not null default now(),
   primary key (household_id, id)
 );
