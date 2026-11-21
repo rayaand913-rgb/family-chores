@@ -59,7 +59,7 @@
   }
 
   function shape(row) {
-    return { id: row.id, name: row.chore_name, date: row.date_added, person: row.assigned_to, points: Number(row.points), done: Boolean(row.completed) };
+    return { id: row.id, name: row.chore_name, date: row.date_added, person: row.assigned_to, points: Number(row.points), done: Boolean(row.completed), completedBy: row.completed_by || "" };
   }
 
   function fmtDate(value) {
@@ -91,12 +91,9 @@
 
   function render() {
     const people = Array.from(new Set(chores.map((c) => c.person).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-    const personalPeople = people.filter((p) => p.toLowerCase() !== "anyone");
-    const personalSelect = $("#myPerson");
     const savedPerson = localStorage.getItem(STORE_PERSON) || "";
-    personalSelect.innerHTML = '<option value="">Choose your name</option>' + personalPeople.map((p) => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join("");
-    personalSelect.value = personalPeople.includes(savedPerson) ? savedPerson : "";
-    if (!personalSelect.value) localStorage.removeItem(STORE_PERSON);
+    const personalInput = $("#myPerson");
+    if (document.activeElement !== personalInput) personalInput.value = savedPerson;
     const personFilter = $("#personFilter");
     const oldPerson = personFilter.value;
     personFilter.innerHTML = '<option value="all">Everyone</option>' + people.map((p) => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join("");
@@ -105,10 +102,10 @@
     const visible = chores.filter((c) => (personFilter.value === "all" || c.person === personFilter.value) && (status === "all" || (status === "done" ? c.done : !c.done)));
     $("#choreRows").innerHTML = visible.map(rowHtml).join("");
     $("#empty").hidden = visible.length > 0;
-    const currentPerson = personalSelect.value;
-    const earned = currentPerson ? chores.filter((c) => c.done && c.person === currentPerson).reduce((sum, c) => sum + Number(c.points || 0), 0) : null;
+    const currentPerson = personalInput.value.trim();
+    const earned = currentPerson ? chores.filter((c) => c.done && c.completedBy.toLowerCase() === currentPerson.toLowerCase()).reduce((sum, c) => sum + Number(c.points || 0), 0) : null;
     $("#totalPoints").innerHTML = (earned === null ? "—" : earned.toLocaleString()) + " <small>pts</small>";
-    $("#myPointsNote").textContent = currentPerson ? "From completed chores assigned to " + currentPerson + "." : "Choose your name to see your points.";
+    $("#myPointsNote").textContent = currentPerson ? "Points from chores checked off by " + currentPerson + "." : "Enter your name before checking off a chore.";
     $("#remaining").textContent = chores.filter((c) => !c.done).length;
     $("#helperCount").textContent = new Set(chores.map((c) => c.person).filter((p) => p && p.toLowerCase() !== "anyone")).size;
     $("#listCount").textContent = chores.length + " " + (chores.length === 1 ? "chore" : "chores") + " on the list";
@@ -161,7 +158,8 @@
       dateAdded: c ? c.date : new Date().toISOString().slice(0, 10),
       assignedTo: $("#chorePerson").value.trim() || "Anyone",
       points: Math.max(0, Number($("#chorePoints").value) || 0),
-      completed: c ? c.done : false
+      completed: c ? c.done : false,
+      completedBy: c ? c.completedBy : null
     }});
     await refresh(true);
     toast(c ? "Chore updated" : "Chore added to the list");
@@ -209,10 +207,16 @@
       const c = chores.find((item) => item.id === button.dataset.id);
       if (!c) return;
       if (button.dataset.action === "edit") return openForm(c);
+      if (button.dataset.action === "toggle" && !c.done && !$("#myPerson").value.trim()) {
+        toast("Enter your name under Your points before checking off a chore.");
+        $("#myPerson").focus();
+        return;
+      }
       button.disabled = true;
       try {
         if (button.dataset.action === "toggle") {
-          await api("save", { chore: { id: c.id, choreName: c.name, dateAdded: c.date, assignedTo: c.person, points: c.points, completed: !c.done } });
+          const completedBy = c.done ? null : $("#myPerson").value.trim();
+          await api("save", { chore: { id: c.id, choreName: c.name, dateAdded: c.date, assignedTo: c.person, points: c.points, completed: !c.done, completedBy } });
           await refresh(true);
           toast(c.done ? "Moved back to to do" : "Nice work! Points earned 🎉");
         } else {
@@ -225,8 +229,8 @@
     });
     $("#personFilter").addEventListener("change", render);
     $("#statusFilter").addEventListener("change", render);
-    $("#myPerson").addEventListener("change", () => {
-      const person = $("#myPerson").value;
+    $("#myPerson").addEventListener("input", () => {
+      const person = $("#myPerson").value.trim();
       if (person) localStorage.setItem(STORE_PERSON, person);
       else localStorage.removeItem(STORE_PERSON);
       render();
