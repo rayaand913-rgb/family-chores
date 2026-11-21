@@ -49,7 +49,7 @@
       let message = result.error.message || "The family list could not be reached.";
       try {
         const details = await result.error.context.json();
-        if (details.error) message = details.error;
+      if (details.error) message = details.error;
       } catch (_) {}
       throw new Error(message);
     }
@@ -126,7 +126,7 @@
 
   async function connect(value) {
     const code = readCode(value);
-    if (!/^[0-9a-f]{64}$/.test(code)) throw new Error("That invite code does not look right.");
+    if (!/^[a-z0-9]{6,64}$/.test(code)) throw new Error("Enter the family password to continue.");
     inviteCode = code;
     await refresh(false);
     localStorage.setItem(STORE_CODE, inviteCode);
@@ -169,31 +169,8 @@
     });
     $("#shareBtn").addEventListener("click", async () => {
       const link = location.origin + location.pathname + "#invite=" + inviteCode;
-      try { await navigator.clipboard.writeText(link); toast("Family invite link copied"); }
-      catch (_) { window.prompt("Copy this family invite link:", link); }
-    });
-    $("#resetBtn").addEventListener("click", () => {
-      $("#resetError").textContent = "";
-      $("#resetDialog").showModal();
-    });
-    $("#cancelReset").addEventListener("click", () => $("#resetDialog").close());
-    $("#confirmReset").addEventListener("click", async () => {
-      const button = $("#confirmReset");
-      button.disabled = true;
-      try {
-        const result = await api("rotate");
-        inviteCode = result.inviteCode;
-        household = result.household;
-        localStorage.setItem(STORE_CODE, inviteCode);
-        await subscribe();
-        const newLink = location.origin + location.pathname + "#invite=" + inviteCode;
-        try { await navigator.clipboard.writeText(newLink); }
-        catch (_) { window.prompt("Copy this new family invite link:", newLink); }
-        $("#resetDialog").close();
-        toast("New family link copied");
-      } catch (error) {
-        $("#resetError").textContent = error.message;
-      } finally { button.disabled = false; }
+      try { await navigator.clipboard.writeText(link); toast("Family link copied"); }
+      catch (_) { window.prompt("Copy this family link:", link); }
     });
     $("#addBtn").addEventListener("click", () => openForm(null));
     $("#cancelBtn").addEventListener("click", () => $("#choreDialog").close());
