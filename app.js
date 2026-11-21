@@ -2,6 +2,7 @@
   const SUPABASE_URL = "https://xjksahyxtnhdbnciwqcg.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhqa3NhaHl4dG5oZGJuY2l3cWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyMjM4OTMsImV4cCI6MjExMDc5OTg5M30.FqW3d9wA2HrBRi9tg5vdU3AlJn945B7N2c4MmrNFDaM";
   const STORE_CODE = "little-wins-family-code";
+  const STORE_PERSON = "little-wins-person";
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const client = window.supabase && window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -90,6 +91,12 @@
 
   function render() {
     const people = Array.from(new Set(chores.map((c) => c.person).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    const personalPeople = people.filter((p) => p.toLowerCase() !== "anyone");
+    const personalSelect = $("#myPerson");
+    const savedPerson = localStorage.getItem(STORE_PERSON) || "";
+    personalSelect.innerHTML = '<option value="">Choose your name</option>' + personalPeople.map((p) => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join("");
+    personalSelect.value = personalPeople.includes(savedPerson) ? savedPerson : "";
+    if (!personalSelect.value) localStorage.removeItem(STORE_PERSON);
     const personFilter = $("#personFilter");
     const oldPerson = personFilter.value;
     personFilter.innerHTML = '<option value="all">Everyone</option>' + people.map((p) => '<option value="' + esc(p) + '">' + esc(p) + '</option>').join("");
@@ -98,8 +105,10 @@
     const visible = chores.filter((c) => (personFilter.value === "all" || c.person === personFilter.value) && (status === "all" || (status === "done" ? c.done : !c.done)));
     $("#choreRows").innerHTML = visible.map(rowHtml).join("");
     $("#empty").hidden = visible.length > 0;
-    const earned = chores.filter((c) => c.done).reduce((sum, c) => sum + Number(c.points || 0), 0);
-    $("#totalPoints").innerHTML = earned.toLocaleString() + " <small>pts</small>";
+    const currentPerson = personalSelect.value;
+    const earned = currentPerson ? chores.filter((c) => c.done && c.person === currentPerson).reduce((sum, c) => sum + Number(c.points || 0), 0) : null;
+    $("#totalPoints").innerHTML = (earned === null ? "—" : earned.toLocaleString()) + " <small>pts</small>";
+    $("#myPointsNote").textContent = currentPerson ? "From completed chores assigned to " + currentPerson + "." : "Choose your name to see your points.";
     $("#remaining").textContent = chores.filter((c) => !c.done).length;
     $("#helperCount").textContent = new Set(chores.map((c) => c.person).filter((p) => p && p.toLowerCase() !== "anyone")).size;
     $("#listCount").textContent = chores.length + " " + (chores.length === 1 ? "chore" : "chores") + " on the list";
@@ -216,6 +225,12 @@
     });
     $("#personFilter").addEventListener("change", render);
     $("#statusFilter").addEventListener("change", render);
+    $("#myPerson").addEventListener("change", () => {
+      const person = $("#myPerson").value;
+      if (person) localStorage.setItem(STORE_PERSON, person);
+      else localStorage.removeItem(STORE_PERSON);
+      render();
+    });
 
     const fromLink = new URLSearchParams(location.hash.slice(1)).get("invite");
     const saved = localStorage.getItem(STORE_CODE);
