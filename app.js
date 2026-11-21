@@ -19,6 +19,28 @@
     toastTimer = setTimeout(() => $("#toast").classList.remove("show"), 2300);
   }
 
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) {}
+    }
+    const helper = document.createElement("textarea");
+    helper.value = text;
+    helper.setAttribute("readonly", "");
+    helper.style.position = "fixed";
+    helper.style.left = "-9999px";
+    helper.style.top = "0";
+    document.body.appendChild(helper);
+    helper.focus();
+    helper.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch (_) {}
+    helper.remove();
+    return copied;
+  }
+
   function showSetup(message) {
     $("#setupPanel").hidden = false;
     $("#summaryPanel").hidden = true;
@@ -187,8 +209,26 @@
     });
     $("#shareBtn").addEventListener("click", async () => {
       const link = location.origin + location.pathname + "#invite=" + inviteCode;
-      try { await navigator.clipboard.writeText(link); toast("Family link copied"); }
-      catch (_) { window.prompt("Copy this family link:", link); }
+      $("#familyLink").value = link;
+      if (await copyText(link)) toast("Family link copied");
+      else {
+        $("#shareMessage").textContent = "Automatic copying was blocked. Press and hold the link below, then choose Copy.";
+        $("#shareDialog").showModal();
+        $("#familyLink").focus();
+        $("#familyLink").select();
+      }
+    });
+    $("#closeShare").addEventListener("click", () => $("#shareDialog").close());
+    $("#copyAgain").addEventListener("click", async () => {
+      const copied = await copyText($("#familyLink").value);
+      if (copied) {
+        $("#shareDialog").close();
+        toast("Family link copied");
+      } else {
+        $("#shareMessage").textContent = "Copy is still blocked. Press and hold the selected link above, then choose Copy.";
+        $("#familyLink").focus();
+        $("#familyLink").select();
+      }
     });
     $("#addBtn").addEventListener("click", () => openForm(null));
     $("#cancelBtn").addEventListener("click", () => $("#choreDialog").close());
