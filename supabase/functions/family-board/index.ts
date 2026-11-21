@@ -65,7 +65,7 @@ Deno.serve(async (request) => {
   if (action === "load") {
     const { data, error } = await admin
       .from("family_chores")
-      .select("id,chore_name,date_added,assigned_to,points,completed")
+      .select("id,chore_name,date_added,assigned_to,points,completed,completed_by")
       .eq("household_id", household.id)
       .order("date_added", { ascending: false })
       .order("created_at", { ascending: false });
@@ -81,11 +81,14 @@ Deno.serve(async (request) => {
     const dateAdded = String(chore.dateAdded || "");
     const assignedTo = String(chore.assignedTo || "Anyone").trim() || "Anyone";
     const points = Number(chore.points);
+    const completed = Boolean(chore.completed);
+    const completedBy = completed ? String(chore.completedBy || "").trim() : null;
     if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "That chore could not be saved." }, 400);
     if (!choreName || choreName.length > 160) return json({ error: "Chore names must be 1 to 160 characters." }, 400);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateAdded) || Number.isNaN(Date.parse(dateAdded + "T00:00:00Z"))) return json({ error: "Choose a valid date." }, 400);
     if (!assignedTo || assignedTo.length > 80) return json({ error: "Who can be assigned must be 1 to 80 characters." }, 400);
     if (!Number.isInteger(points) || points < 0 || points > 999999) return json({ error: "Points must be between 0 and 999,999." }, 400);
+    if (completed && (!completedBy || completedBy.length > 80)) return json({ error: "Enter who completed the chore." }, 400);
 
     const { error } = await admin.from("family_chores").upsert({
       household_id: household.id,
@@ -94,7 +97,8 @@ Deno.serve(async (request) => {
       date_added: dateAdded,
       assigned_to: assignedTo,
       points,
-      completed: Boolean(chore.completed)
+      completed,
+      completed_by: completedBy
     }, { onConflict: "household_id,id" });
     if (error) return json({ error: "Could not save that chore." }, 500);
     await notifyFamily(household.codeHash);
