@@ -25,12 +25,8 @@ async function hashCode(code: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function makeCode() {
-  return Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 async function findHousehold(code: string) {
-  if (!/^[0-9a-f]{64}$/.test(code)) return null;
+  if (!/^[a-z0-9]{6,64}$/.test(code)) return null;
   const hashed = await hashCode(code);
   const { data, error } = await admin
     .from("family_households")
@@ -62,9 +58,9 @@ Deno.serve(async (request) => {
   }
 
   const action = body.action;
-  const inviteCode = String(body.inviteCode || "").toLowerCase();
+  const inviteCode = String(body.inviteCode || "").trim().toLowerCase();
   const household = await findHousehold(inviteCode).catch(() => null);
-  if (!household) return json({ error: "That family invite link is not valid." }, 403);
+  if (!household) return json({ error: "That family password is not correct." }, 403);
 
   if (action === "load") {
     const { data, error } = await admin
@@ -116,14 +112,7 @@ Deno.serve(async (request) => {
   }
 
   if (action === "rotate") {
-    const newCode = makeCode();
-    const { data, error } = await admin.from("family_households")
-      .update({ invite_code_hash: await hashCode(newCode) })
-      .eq("id", household.id)
-      .select("id,name,created_at")
-      .single();
-    if (error) return json({ error: "Could not reset the family invite link." }, 500);
-    return json({ household: data, inviteCode: newCode });
+    return json({ error: "Change the family password in the project settings." }, 400);
   }
 
   return json({ error: "That family list action is not supported." }, 400);
